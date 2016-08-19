@@ -1,6 +1,7 @@
 package com.proxy;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -8,6 +9,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.internal.StringUtil;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
 
@@ -31,7 +36,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
         Bootstrap b = new Bootstrap();
         b.group(inboundChannel.eventLoop())
                 .channel(ctx.channel().getClass())
-                .handler(new HexDumpProxyBackendHandler(inboundChannel))
+                .handler(new RemoteProxyInitializer(inboundChannel))
                 .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);
         outboundChannel = f.channel();
@@ -48,19 +53,34 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
         });
     }
 
+    StringBuffer remoteRequestBody = new StringBuffer();
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
         if (outboundChannel.isActive()) {
-            outboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        // was able to flush out data, start to read the next chunk
-                        ctx.channel().read();
-                    } else {
-                        future.channel().close();
+            String data = (String) msg;
+            if(data.trim().length()==0){
+                remoteRequestBody.append("\n");
+                System.out.println("---remote request body:\n" +remoteRequestBody + "---");
+                outboundChannel.writeAndFlush(remoteRequestBody).addListener(new ChannelFutureListener() {
+                    public void operationComplete(ChannelFuture future) {
+                        if (future.isSuccess()) {
+                            // was able to flush out data, start to read the next chunk
+                            ctx.channel().read();
+                        } else {
+                            future.channel().close();
+                            System.out.println("---------------------------- Error -------------------------------");
+                            future.cause().printStackTrace();
+                        }
                     }
+                });
+            }else{
+                System.out.println("---proxy:" +data + "---");
+                if(data.startsWith("Host")){
+                    remoteRequestBody.append("Host:beta-api.qoo-app.com\n");
+                }else{
+                    remoteRequestBody.append(data+"\n");
                 }
-            });
+            }
         }
     }
 

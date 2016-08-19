@@ -22,6 +22,7 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+        //System.out.println(msg);
         inboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
@@ -40,6 +41,7 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        System.out.println("----------------------------HexDumpProxyBackendHandler Error -------------------------------");
         cause.printStackTrace();
         HexDumpProxyFrontendHandler.closeOnFlush(ctx.channel());
     }
