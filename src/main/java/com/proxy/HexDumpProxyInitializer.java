@@ -2,8 +2,7 @@ package com.proxy;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.http.*;
 
 public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -18,9 +17,8 @@ public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     public void initChannel(SocketChannel ch) {
         ch.pipeline().addLast(
-               // new LoggingHandler(LogLevel.INFO),
-                new LineBasedFrameDecoder(1024),
-                new StringDecoder(),
+                new HttpServerCodec(),
+                new HttpObjectAggregator(512 * 1024),
                 new HexDumpProxyFrontendHandler(remoteHost, remotePort));
     }
 }

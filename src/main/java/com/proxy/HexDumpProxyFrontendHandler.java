@@ -3,16 +3,14 @@ package com.proxy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOption;
-import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
-import io.netty.util.internal.StringUtil;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.*;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Iterator;
+import java.util.Map;
 
 public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
 
@@ -34,8 +32,8 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
-        b.group(inboundChannel.eventLoop())
-                .channel(ctx.channel().getClass())
+        b.group(new NioEventLoopGroup())
+                .channel(NioSocketChannel.class)
                 .handler(new RemoteProxyInitializer(inboundChannel))
                 .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);
@@ -53,35 +51,73 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
         });
     }
 
-    StringBuffer remoteRequestBody = new StringBuffer();
     @Override
-    public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        if (outboundChannel.isActive()) {
-            String data = (String) msg;
-            if(data.trim().length()==0){
-                remoteRequestBody.append("\n");
-                System.out.println("---remote request body:\n" +remoteRequestBody + "---");
-                outboundChannel.writeAndFlush(remoteRequestBody).addListener(new ChannelFutureListener() {
-                    public void operationComplete(ChannelFuture future) {
-                        if (future.isSuccess()) {
-                            // was able to flush out data, start to read the next chunk
-                            ctx.channel().read();
-                        } else {
-                            future.channel().close();
-                            System.out.println("---------------------------- Error -------------------------------");
-                            future.cause().printStackTrace();
-                        }
-                    }
-                });
-            }else{
-                System.out.println("---proxy:" +data + "---");
-                if(data.startsWith("Host")){
-                    remoteRequestBody.append("Host:beta-api.qoo-app.com\n");
-                }else{
-                    remoteRequestBody.append(data+"\n");
+    public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
+        if(msg instanceof HttpRequest){
+            FullHttpRequest req = (FullHttpRequest) msg;
+
+            //发送到目标远程服务的请求
+            StringBuilder rebuildRequest = new StringBuilder();
+
+            rebuildRequest.append(req.method()).append(" ")
+                    .append(req.uri()).append(" ")
+                    .append("HTTP/1.1").append("\n");
+
+            for (Map.Entry h: req.headers()){
+                String hKey = (String) h.getKey();
+                String hValue = (String) h.getValue();
+                if(hKey.equalsIgnoreCase("host")){
+                    hValue = HexDumpProxy.REMOTE_HOST + ":"+HexDumpProxy.REMOTE_PORT;
                 }
+                rebuildRequest.append(hKey).append(":").append(hValue).append("\n");
             }
+
+            //区分请求头部结束，添加 \n 换行标识
+            rebuildRequest.append("\n");
+            if("POST".equals(req.method().toString())) {
+                //请求体
+                ByteBuf content = req.content();
+                String reqBody = buff2String(content);
+                System.out.println("request body:\n" + reqBody);
+                rebuildRequest.append(reqBody);
+            }
+
+            //modifry host header
+            req.headers().set("Host", HexDumpProxy.REMOTE_HOST);
+
+            //发送请求数据
+            System.out.println(msg);
+
+            outboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future) {
+                    if (future.isSuccess()) {
+                        // was able to flush out data, start to read the next chunk
+                        ctx.channel().read();
+                    } else {
+                        future.channel().close();
+                        System.out.println("---------------------------- Error -------------------------------");
+                        future.cause().printStackTrace();
+                    }
+                }
+            });
+
+        }else{
+            System.out.println("ignore............");
+            super.channelRead(ctx, msg);
         }
+    }
+
+
+    public static String buff2String(ByteBuf buf){
+        byte[] req = new byte[buf.readableBytes()];
+        buf.readBytes(req);
+        try {
+            String str = new String(req,"UTF-8");
+            return str;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override
