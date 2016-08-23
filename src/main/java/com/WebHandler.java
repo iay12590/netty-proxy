@@ -1,4 +1,4 @@
-package com.proxy;
+package com;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;

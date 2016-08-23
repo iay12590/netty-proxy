@@ -4,12 +4,12 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.*;
 
-public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
+public class ProxyChannelInit extends ChannelInitializer<SocketChannel> {
 
     private final String remoteHost;
     private final int remotePort;
 
-    public HexDumpProxyInitializer(String remoteHost, int remotePort) {
+    public ProxyChannelInit(String remoteHost, int remotePort) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
     }
@@ -18,8 +18,7 @@ public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
     public void initChannel(SocketChannel ch) {
         ch.pipeline().addLast(
                 new HttpServerCodec(),
-                //new HttpContentCompressor(),
-                new HttpObjectAggregator(512 * 1024),
-                new HexDumpProxyFrontendHandler(remoteHost, remotePort));
+                new HttpObjectAggregator(512 * 1024 * 1024),
+                new ProxyHandler(remoteHost, remotePort));
     }
 }

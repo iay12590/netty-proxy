@@ -5,23 +5,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpRequest;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Iterator;
-import java.util.Map;
 
-public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
+public class ProxyHandler extends ChannelInboundHandlerAdapter {
 
     private final String remoteHost;
     private final int remotePort;
-
-    // As we use inboundChannel.eventLoop() when buildling the Bootstrap this does not need to be volatile as
-    // the outboundChannel will use the same EventLoop (and therefore Thread) as the inboundChannel.
     private Channel outboundChannel;
 
-    public HexDumpProxyFrontendHandler(String remoteHost, int remotePort) {
+    public ProxyHandler(String remoteHost, int remotePort) {
         this.remoteHost = remoteHost;
         this.remotePort = remotePort;
     }
@@ -34,7 +29,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
         Bootstrap b = new Bootstrap();
         b.group(new NioEventLoopGroup())
                 .channel(ctx.channel().getClass())
-                .handler(new RemoteProxyInitializer(inboundChannel))
+                .handler(new BackendClientChannelInit(inboundChannel))
                 .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);
         outboundChannel = f.channel();
@@ -55,7 +50,7 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         if(msg instanceof HttpRequest){
             FullHttpRequest req = (FullHttpRequest) msg;
-            req.headers().set("Host", HexDumpProxy.REMOTE_HOST);
+            req.headers().set("Host", ProxyServer.REMOTE_HOST);
             //发送请求数据
             System.out.println(req + "\n");
             outboundChannel.writeAndFlush(req).addListener(new ChannelFutureListener() {

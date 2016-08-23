@@ -1,4 +1,4 @@
-package com.proxy;
+package com;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
