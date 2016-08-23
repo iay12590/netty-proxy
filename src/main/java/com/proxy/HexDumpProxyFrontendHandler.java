@@ -27,13 +27,13 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) {
+    public void channelActive(final ChannelHandlerContext ctx) {
         final Channel inboundChannel = ctx.channel();
 
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
         b.group(new NioEventLoopGroup())
-                .channel(NioSocketChannel.class)
+                .channel(ctx.channel().getClass())
                 .handler(new RemoteProxyInitializer(inboundChannel))
                 .option(ChannelOption.AUTO_READ, false);
         ChannelFuture f = b.connect(remoteHost, remotePort);
@@ -55,40 +55,10 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
         if(msg instanceof HttpRequest){
             FullHttpRequest req = (FullHttpRequest) msg;
-
-            //发送到目标远程服务的请求
-            StringBuilder rebuildRequest = new StringBuilder();
-
-            rebuildRequest.append(req.method()).append(" ")
-                    .append(req.uri()).append(" ")
-                    .append("HTTP/1.1").append("\n");
-
-            for (Map.Entry h: req.headers()){
-                String hKey = (String) h.getKey();
-                String hValue = (String) h.getValue();
-                if(hKey.equalsIgnoreCase("host")){
-                    hValue = HexDumpProxy.REMOTE_HOST + ":"+HexDumpProxy.REMOTE_PORT;
-                }
-                rebuildRequest.append(hKey).append(":").append(hValue).append("\n");
-            }
-
-            //区分请求头部结束，添加 \n 换行标识
-            rebuildRequest.append("\n");
-            if("POST".equals(req.method().toString())) {
-                //请求体
-                ByteBuf content = req.content();
-                String reqBody = buff2String(content);
-                System.out.println("request body:\n" + reqBody);
-                rebuildRequest.append(reqBody);
-            }
-
-            //modifry host header
             req.headers().set("Host", HexDumpProxy.REMOTE_HOST);
-
             //发送请求数据
-            System.out.println(msg);
-
-            outboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
+            System.out.println(req + "\n");
+            outboundChannel.writeAndFlush(req).addListener(new ChannelFutureListener() {
                 public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         // was able to flush out data, start to read the next chunk
@@ -106,7 +76,6 @@ public class HexDumpProxyFrontendHandler extends ChannelInboundHandlerAdapter {
             super.channelRead(ctx, msg);
         }
     }
-
 
     public static String buff2String(ByteBuf buf){
         byte[] req = new byte[buf.readableBytes()];

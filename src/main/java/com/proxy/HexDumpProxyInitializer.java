@@ -18,6 +18,7 @@ public class HexDumpProxyInitializer extends ChannelInitializer<SocketChannel> {
     public void initChannel(SocketChannel ch) {
         ch.pipeline().addLast(
                 new HttpServerCodec(),
+                //new HttpContentCompressor(),
                 new HttpObjectAggregator(512 * 1024),
                 new HexDumpProxyFrontendHandler(remoteHost, remotePort));
     }

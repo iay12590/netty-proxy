@@ -6,6 +6,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
@@ -26,8 +27,11 @@ public class RemoteProxyInitializer extends ChannelInitializer<SocketChannel> {
 
     protected void initChannel(SocketChannel socketChannel) throws Exception {
         socketChannel.pipeline().addLast(
+                /*new HttpRequestEncoder(),
+                new HttpResponseDecoder(),*/
                 new HttpClientCodec(),
-                new HttpObjectAggregator(512 * 1024),
+                //new HttpContentDecompressor(),
+                new HttpObjectAggregator(512 * 1024 * 1024),
                 new HexDumpProxyBackendHandler(this.inboundChannel));
     }
 }
