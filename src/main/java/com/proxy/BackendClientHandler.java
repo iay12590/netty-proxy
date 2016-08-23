@@ -4,8 +4,11 @@ package com.proxy;
 
 import io.netty.channel.*;
 
+/**
+ * Created by jerry on 2016/8/19.
+ */
 public class BackendClientHandler extends ChannelInboundHandlerAdapter {
-    //private static final byte[] CONTENT = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd' };
+
     private final Channel inboundChannel;
 
     public BackendClientHandler(Channel inboundChannel) {
@@ -19,14 +22,6 @@ public class BackendClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        //System.out.println(msg);
-       /* FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(CONTENT));
-        response.headers().set(CONTENT_TYPE, "text/plain");
-        response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
-
-        response.headers().set(CONNECTION, KEEP_ALIVE);*/
-        // ctx.write(response);
-
         System.out.println("---------------------------\n" + msg);
         inboundChannel.writeAndFlush(msg).addListener(new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {

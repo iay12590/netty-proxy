@@ -23,6 +23,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
+/**
+ * Created by jerry on 2016/8/19.
+ */
 public final class ProxyServer {
 
     public static final int LOCAL_PORT = Integer.parseInt(System.getProperty("localPort", "8088"));
@@ -50,6 +53,9 @@ public final class ProxyServer {
     }
 
     public static void main(String[] args) throws Exception {
+        ExceptRequest.except(
+                new Request().method("get").uri("/v6/welcomes")
+        ).response("40000004 You can't found me").submit();
         new ProxyServer().start(REMOTE_HOST, REMOTE_PORT);
     }
 }
