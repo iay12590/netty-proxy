@@ -29,7 +29,7 @@ public final class ProxyServer {
     public static final String REMOTE_HOST = System.getProperty("remoteHost", "beta-api.qoo-app.com");
     public static final int REMOTE_PORT = Integer.parseInt(System.getProperty("remotePort", "80"));
 
-    public void start() throws InterruptedException {
+    public void start(final String remoteHost, final int remotePort) throws InterruptedException {
         System.err.println("Proxying *:" + LOCAL_PORT + " to " + REMOTE_HOST + ':' + REMOTE_PORT + " ...");
 
         // Configure the bootstrap.
@@ -40,7 +40,7 @@ public final class ProxyServer {
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new ProxyChannelInit(REMOTE_HOST, REMOTE_PORT))
+                    .childHandler(new ProxyChannelInit(remoteHost, remotePort))
                     .childOption(ChannelOption.AUTO_READ, false)
                     .bind(LOCAL_PORT).sync().channel().closeFuture().sync();
         } finally {
@@ -50,6 +50,6 @@ public final class ProxyServer {
     }
 
     public static void main(String[] args) throws Exception {
-        new ProxyServer().start();
+        new ProxyServer().start(REMOTE_HOST, REMOTE_PORT);
     }
 }

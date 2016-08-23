@@ -4,7 +4,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.*;
 
-public class ProxyChannelInit extends ChannelInitializer<SocketChannel> {
+public final class ProxyChannelInit extends ChannelInitializer<SocketChannel> {
 
     private final String remoteHost;
     private final int remotePort;

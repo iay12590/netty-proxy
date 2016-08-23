@@ -9,7 +9,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 /**
  * Created by jerry on 2016/8/19.
  */
-public class BackendClientChannelInit extends ChannelInitializer<SocketChannel> {
+public final class BackendClientChannelInit extends ChannelInitializer<SocketChannel> {
     Channel inboundChannel;
 
     public BackendClientChannelInit(Channel inboundChannel) {
